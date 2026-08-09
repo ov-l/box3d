@@ -245,6 +245,27 @@ B3_API void b3World_RebuildStaticTree( b3WorldId worldId );
 /// This is for internal testing
 B3_API void b3World_EnableSpeculative( b3WorldId worldId, bool flag );
 
+/// Rigidly translate the whole world, so a host can keep the simulated content near the float
+/// origin as it streams across a large map. Every body transform, shape bound and broad-phase bound
+/// moves by @p translation; nothing that stores a relationship does, so contacts, warm-start
+/// impulses, joints and sleeping islands all survive unchanged and no body is woken.
+///
+/// This is the float-precision alternative to BOX3D_DOUBLE_PRECISION: rather than widening the
+/// coordinate, keep it small. Call it between steps -- never from inside a callback -- and shift by
+/// whole units of whatever grid the host rebases on, so the translation is exact.
+///
+/// Positions the host is still holding from before the call (query hits, cached transforms, the
+/// event arrays it has not drained yet) are in the old frame and must be offset by the same amount.
+/// The event arrays owned by the world are shifted for you.
+/// @ingroup world
+B3_API void b3World_ShiftOrigin( b3WorldId worldId, b3Vec3 translation );
+
+/// The sum of every translation applied by b3World_ShiftOrigin since the world was created.
+/// Diagnostic: it tells you how far the world's float frame has drifted from the frame the content
+/// was authored in.
+/// @ingroup world
+B3_API b3Pos b3World_GetOriginShift( b3WorldId worldId );
+
 /**
  * @defgroup recording Recording
  * @brief Record and replay world state for debugging.

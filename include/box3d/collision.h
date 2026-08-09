@@ -100,6 +100,15 @@ B3_API int b3DynamicTree_Rebuild( b3DynamicTree* tree, bool fullBuild );
 /// Get the number of bytes used by this tree
 B3_API int b3DynamicTree_GetByteCount( const b3DynamicTree* tree );
 
+/// Translate every node bound by the given amount. The tree topology is unchanged: a uniform
+/// translation preserves every overlap and every surface-area cost, so no rebalancing is needed.
+/// @see b3World_ShiftOrigin
+B3_API void b3DynamicTree_ShiftOrigin( b3DynamicTree* tree, b3Vec3 translation );
+
+/// Translate the node bounds in [startIndex, endIndex). Lets a host split the shift across worker
+/// threads: the nodes are disjoint and no node reads another, so any partition is safe.
+B3_API void b3DynamicTree_ShiftOriginRange( b3DynamicTree* tree, b3Vec3 translation, int startIndex, int endIndex );
+
 /// Validate this tree. For testing.
 B3_API void b3DynamicTree_Validate( const b3DynamicTree* tree );
 

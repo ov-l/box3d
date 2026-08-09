@@ -1091,6 +1091,26 @@ int b3DynamicTree_GetByteCount( const b3DynamicTree* tree )
 	return (int)size;
 }
 
+void b3DynamicTree_ShiftOriginRange( b3DynamicTree* tree, b3Vec3 translation, int startIndex, int endIndex )
+{
+	// Every allocated node is walked, free ones included. A free node's bounds are dead storage that
+	// the next allocation overwrites, so shifting them costs one add and saves the branch.
+	b3TreeNode* nodes = tree->nodes;
+	for ( int i = startIndex; i < endIndex; ++i )
+	{
+		nodes[i].aabb.lowerBound = b3Add( nodes[i].aabb.lowerBound, translation );
+		nodes[i].aabb.upperBound = b3Add( nodes[i].aabb.upperBound, translation );
+	}
+
+	// Rebuild scratch is only valid inside b3DynamicTree_Rebuild, which refills it from the node
+	// bounds, so it deliberately is not shifted here.
+}
+
+void b3DynamicTree_ShiftOrigin( b3DynamicTree* tree, b3Vec3 translation )
+{
+	b3DynamicTree_ShiftOriginRange( tree, translation, 0, tree->nodeCapacity );
+}
+
 b3TreeStats b3DynamicTree_Query( const b3DynamicTree* tree, b3AABB aabb, uint64_t maskBits, bool requireAllBits,
 								 b3TreeQueryCallbackFcn* callback, void* context )
 {

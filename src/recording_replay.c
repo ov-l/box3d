@@ -815,6 +815,11 @@ static void b3RecDispatch_WorldEnableSpeculative( const b3RecArgs_WorldEnableSpe
 	b3World_EnableSpeculative( rdr->replayWorldId, a->flag );
 }
 
+static void b3RecDispatch_WorldShiftOrigin( const b3RecArgs_WorldShiftOrigin* a, b3RecReader* rdr )
+{
+	b3World_ShiftOrigin( rdr->replayWorldId, a->translation );
+}
+
 static void b3RecDispatch_CreateBody( const b3RecArgs_CreateBody* a, b3RecReader* rdr )
 {
 	b3BodyId recId = b3RecR_BODYID( rdr );

@@ -225,6 +225,11 @@ typedef struct b3World
 	// - if no bodies want to sleep then there is no reason to perform island splitting
 	int splitIslandId;
 
+	// Accumulated translation applied by b3World_ShiftOrigin. Purely bookkeeping: the simulation
+	// never reads it, but a host that rebases the world needs to know how far the float frame it is
+	// simulating in has drifted from the frame its content was authored in.
+	b3Pos originShift;
+
 	b3Vec3 gravity;
 	float hitEventThreshold;
 	float restitutionThreshold;
