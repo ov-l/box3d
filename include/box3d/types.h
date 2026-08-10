@@ -465,7 +465,7 @@ typedef struct b3ShapeDef
 	void* userData;
 
 	/// Surface material used on mesh shapes per triangle. Ignored for convex shapes. Ignored for compound shapes.
-	b3SurfaceMaterial* materials;
+	const b3SurfaceMaterial* materials;
 
 	/// Surface material count.
 	int materialCount;
@@ -2066,15 +2066,15 @@ typedef struct b3BoxHull
 typedef struct b3MeshDef
 {
 	/// Triangle vertices.
-	b3Vec3* vertices;
+	const b3Vec3* vertices;
 
 	/// Triangle vertex indices. 3 for each triangle. CCW winding.
-	int32_t* indices;
+	const int32_t* indices;
 
 	/// Triangle material index. 1 per triangle. Indexes into b3ShapeDef::materials.
 	/// This allows different run-time material data to be associated with different
 	/// instances of this mesh.
-	uint8_t* materialIndices;
+	const uint8_t* materialIndices;
 
 	/// Tolerance for vertex welding in length units.
 	float weldTolerance;

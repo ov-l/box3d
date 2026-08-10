@@ -763,6 +763,10 @@ B3_API int b3Body_GetShapeCount( b3BodyId bodyId );
 /// @returns the number of shape ids stored in the user array
 B3_API int b3Body_GetShapes( b3BodyId bodyId, b3ShapeId* shapeArray, int capacity );
 
+/// Destroy a contiguous range of shapes on this body. Shape indices use the same order as b3Body_GetShapes.
+/// The body mass is updated once after all shapes have been destroyed.
+B3_API void b3Body_DestroyShapes( b3BodyId bodyId, int startShapeIndex, int shapeCount );
+
 /// Get the number of joints on this body
 B3_API int b3Body_GetJointCount( b3BodyId bodyId );
 
@@ -858,6 +862,12 @@ B3_API b3ShapeId b3CreateBakedCompoundShape( b3BodyId bodyId, b3ShapeDef* def, c
 ///	body are destroyed at once.
 ///	@see b3Body_ApplyMassFromShapes
 B3_API void b3DestroyShape( b3ShapeId shapeId, bool updateBodyMass );
+
+/// Destroy a contiguous range of shapes on one body, beginning with startShapeId. The range follows
+/// the shape order returned by b3Body_GetShapes. The body mass is optionally updated once after all
+/// shapes have been destroyed.
+/// @see b3Body_ApplyMassFromShapes
+B3_API void b3DestroyShapeRange( b3ShapeId startShapeId, int count, bool updateBodyMass );
 
 /// Shape identifier validation. Provides validation for up to 64K allocations.
 B3_API bool b3Shape_IsValid( b3ShapeId id );

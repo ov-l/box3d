@@ -1153,6 +1153,18 @@ static int AllOps( void )
 	b3ShapeId tmpShapeId = b3CreateSphereShape( capsuleBodyId, &capsuleShapeDef, &tmpSphere );
 	b3DestroyShape( tmpShapeId, true );
 
+	// Throwaway body to exercise both range-destruction operations.
+	b3BodyId rangeBodyId = b3CreateBody( worldId, &bodyDef );
+	for ( int i = 0; i < 4; ++i )
+	{
+		b3Sphere rangeSphere = { { 0.25f * i, 0.0f, 0.0f }, 0.1f };
+		b3CreateSphereShape( rangeBodyId, &sphereShapeDef, &rangeSphere );
+	}
+	b3ShapeId rangeShapes[4];
+	ENSURE( b3Body_GetShapes( rangeBodyId, rangeShapes, 4 ) == 4 );
+	b3DestroyShapeRange( rangeShapes[1], 2, true );
+	b3Body_DestroyShapes( rangeBodyId, 0, 2 );
+
 	// Shape mutators: SetFriction, SetRestitution, SetDensity, SetSurfaceMaterial, SetMeshMaterial,
 	// SetFilter, EnableSensorEvents, EnableContactEvents, EnableHitEvents, EnablePreSolveEvents,
 	// ApplyWind, SetSphere, SetCapsule, SetHull, SetMesh, SetName

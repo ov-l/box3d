@@ -43,6 +43,7 @@ B3_REC_OP( 0x0E, WorldShiftOrigin, RET_NONE, ARG( WORLDID, world ) ARG( VEC3, tr
 // Body
 B3_REC_OP( 0x10, CreateBody, RET_BODYID, ARG( WORLDID, world ) ARG( BODYDEF, def ) )
 B3_REC_OP( 0x11, DestroyBody, RET_NONE, ARG( BODYID, body ) )
+B3_REC_OP( 0x12, BodyDestroyShapes, RET_NONE, ARG( BODYID, body ) ARG( I32, startShapeIndex ) ARG( I32, shapeCount ) )
 B3_REC_OP( 0x20, BodySetTransform, RET_NONE, ARG( BODYID, body ) ARG( POSITION, position ) ARG( QUAT, rotation ) )
 B3_REC_OP( 0x21, BodySetLinearVelocity, RET_NONE, ARG( BODYID, body ) ARG( VEC3, v ) )
 B3_REC_OP( 0x22, BodySetType, RET_NONE, ARG( BODYID, body ) ARG( I32, type ) )
@@ -79,6 +80,8 @@ B3_REC_OP( 0x43, CreateMeshShape, RET_SHAPEID, ARG( BODYID, body ) ARG( SHAPEDEF
 B3_REC_OP( 0x44, CreateHeightFieldShape, RET_SHAPEID, ARG( BODYID, body ) ARG( SHAPEDEF, def ) ARG( GEOMID, geometryId ) )
 B3_REC_OP( 0x45, CreateCompoundShape, RET_SHAPEID, ARG( BODYID, body ) ARG( SHAPEDEF, def ) ARG( GEOMID, geometryId ) )
 B3_REC_OP( 0x46, DestroyShape, RET_NONE, ARG( SHAPEID, shape ) ARG( BOOL, updateBodyMass ) )
+B3_REC_OP( 0x47, DestroyShapeRange, RET_NONE,
+		   ARG( SHAPEID, startShape ) ARG( I32, count ) ARG( BOOL, updateBodyMass ) )
 
 // Shape mutators
 B3_REC_OP( 0x50, ShapeSetDensity, RET_NONE, ARG( SHAPEID, shape ) ARG( F32, density ) ARG( BOOL, updateBodyMass ) )

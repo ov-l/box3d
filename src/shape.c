@@ -569,6 +569,44 @@ static void b3DestroyShapeInternal( b3World* world, b3Shape* shape, b3Body* body
 	b3ValidateSolverSets( world );
 }
 
+static bool b3ValidateShapeRange( b3World* world, const b3Body* body, int startShapeId, int count )
+{
+	int shapeId = startShapeId;
+	for ( int i = 0; i < count; ++i )
+	{
+		if ( shapeId == B3_NULL_INDEX )
+		{
+			B3_ASSERT( false );
+			return false;
+		}
+
+		const b3Shape* shape = b3Array_Get( world->shapes, shapeId );
+		if ( shape->id != shapeId || shape->bodyId != body->id )
+		{
+			B3_ASSERT( false );
+			return false;
+		}
+
+		shapeId = shape->nextShapeId;
+	}
+
+	return true;
+}
+
+static void b3DestroyShapeRangeInternal( b3World* world, b3Body* body, int startShapeId, int count )
+{
+	// Shapes may belong to a static body, so wake all bodies touching the removed shapes.
+	bool wakeBodies = true;
+	int shapeId = startShapeId;
+	for ( int i = 0; i < count; ++i )
+	{
+		b3Shape* shape = b3Array_Get( world->shapes, shapeId );
+		int nextShapeId = shape->nextShapeId;
+		b3DestroyShapeInternal( world, shape, body, wakeBodies );
+		shapeId = nextShapeId;
+	}
+}
+
 void b3DestroyShape( b3ShapeId shapeId, bool updateBodyMass )
 {
 	b3World* world = b3GetUnlockedWorld( shapeId.world0 );
@@ -583,17 +621,86 @@ void b3DestroyShape( b3ShapeId shapeId, bool updateBodyMass )
 
 	b3Shape* shape = b3GetShape( world, shapeId );
 
-	// need to wake bodies because this might be a static body
-	bool wakeBodies = true;
-
 	b3Body* body = b3Array_Get( world->bodies, shape->bodyId );
-	b3DestroyShapeInternal( world, shape, body, wakeBodies );
+	b3DestroyShapeRangeInternal( world, body, shape->id, 1 );
 
 	if ( updateBodyMass == true )
 	{
 		b3UpdateBodyMassData( world, body );
 	}
 
+	world->locked = false;
+}
+
+void b3DestroyShapeRange( b3ShapeId startShapeId, int count, bool updateBodyMass )
+{
+	b3World* world = b3GetUnlockedWorld( startShapeId.world0 );
+	if ( world == NULL )
+	{
+		return;
+	}
+
+	B3_ASSERT( count >= 0 );
+	if ( count <= 0 )
+	{
+		return;
+	}
+
+	b3Shape* startShape = b3GetShape( world, startShapeId );
+	b3Body* body = b3Array_Get( world->bodies, startShape->bodyId );
+	if ( b3ValidateShapeRange( world, body, startShape->id, count ) == false )
+	{
+		return;
+	}
+
+	B3_REC( world, DestroyShapeRange, startShapeId, count, updateBodyMass );
+
+	world->locked = true;
+	b3DestroyShapeRangeInternal( world, body, startShape->id, count );
+
+	if ( updateBodyMass == true )
+	{
+		b3UpdateBodyMassData( world, body );
+	}
+
+	world->locked = false;
+}
+
+void b3Body_DestroyShapes( b3BodyId bodyId, int startShapeIndex, int shapeCount )
+{
+	b3World* world = b3GetUnlockedWorld( bodyId.world0 );
+	if ( world == NULL )
+	{
+		return;
+	}
+
+	b3Body* body = b3GetBodyFullId( world, bodyId );
+	bool validRange = 0 <= startShapeIndex && 0 <= shapeCount && startShapeIndex <= body->shapeCount &&
+					  shapeCount <= body->shapeCount - startShapeIndex;
+	B3_ASSERT( validRange );
+	if ( validRange == false )
+	{
+		return;
+	}
+
+	if ( shapeCount == 0 )
+	{
+		return;
+	}
+
+	int startShapeId = body->headShapeId;
+	for ( int i = 0; i < startShapeIndex; ++i )
+	{
+		const b3Shape* shape = b3Array_Get( world->shapes, startShapeId );
+		startShapeId = shape->nextShapeId;
+	}
+
+	B3_ASSERT( b3ValidateShapeRange( world, body, startShapeId, shapeCount ) );
+	B3_REC( world, BodyDestroyShapes, bodyId, startShapeIndex, shapeCount );
+
+	world->locked = true;
+	b3DestroyShapeRangeInternal( world, body, startShapeId, shapeCount );
+	b3UpdateBodyMassData( world, body );
 	world->locked = false;
 }
 

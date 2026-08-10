@@ -385,6 +385,78 @@ static int SetMassDataConsistentVelocity( void )
 	return 0;
 }
 
+static int DestroyShapeRanges( void )
+{
+	b3WorldDef worldDef = b3DefaultWorldDef();
+	b3WorldId worldId = b3CreateWorld( &worldDef );
+
+	b3BodyDef bodyDef = b3DefaultBodyDef();
+	bodyDef.type = b3_dynamicBody;
+	b3BodyId bodyId = b3CreateBody( worldId, &bodyDef );
+
+	b3ShapeDef shapeDef = b3DefaultShapeDef();
+	shapeDef.density = 1.0f;
+
+	b3ShapeId created[6];
+	for ( int i = 0; i < 6; ++i )
+	{
+		b3Sphere sphere = { { 2.0f * i, 0.0f, 0.0f }, 0.5f };
+		created[i] = b3CreateSphereShape( bodyId, &shapeDef, &sphere );
+	}
+
+	float initialMass = b3Body_GetMass( bodyId );
+	float shapeMass = initialMass / 6.0f;
+
+	// Shape indices follow b3Body_GetShapes order, which is newest first.
+	b3ShapeId shapes[6];
+	ENSURE( b3Body_GetShapes( bodyId, shapes, 6 ) == 6 );
+	for ( int i = 0; i < 6; ++i )
+	{
+		ENSURE( B3_ID_EQUALS( shapes[i], created[5 - i] ) );
+	}
+	b3DestroyShapeRange( shapes[0], 0, false );
+	ENSURE( b3Body_GetShapeCount( bodyId ) == 6 );
+
+	// Remove a middle range without recomputing mass.
+	b3DestroyShapeRange( shapes[1], 3, false );
+	ENSURE( b3Body_GetShapeCount( bodyId ) == 3 );
+	ENSURE( b3Shape_IsValid( shapes[0] ) );
+	ENSURE( b3Shape_IsValid( shapes[1] ) == false );
+	ENSURE( b3Shape_IsValid( shapes[2] ) == false );
+	ENSURE( b3Shape_IsValid( shapes[3] ) == false );
+	ENSURE( b3Shape_IsValid( shapes[4] ) );
+	ENSURE( b3Shape_IsValid( shapes[5] ) );
+	ENSURE_SMALL( b3Body_GetMass( bodyId ) - initialMass, 1e-5f );
+
+	b3ShapeId remaining[3];
+	ENSURE( b3Body_GetShapes( bodyId, remaining, 3 ) == 3 );
+	ENSURE( B3_ID_EQUALS( remaining[0], shapes[0] ) );
+	ENSURE( B3_ID_EQUALS( remaining[1], shapes[4] ) );
+	ENSURE( B3_ID_EQUALS( remaining[2], shapes[5] ) );
+
+	b3Body_ApplyMassFromShapes( bodyId );
+	ENSURE_SMALL( b3Body_GetMass( bodyId ) - 3.0f * shapeMass, 1e-5f );
+
+	// The body-indexed API updates mass once after removing its range.
+	b3Body_DestroyShapes( bodyId, 1, 1 );
+	ENSURE( b3Body_GetShapeCount( bodyId ) == 2 );
+	ENSURE( b3Shape_IsValid( remaining[0] ) );
+	ENSURE( b3Shape_IsValid( remaining[1] ) == false );
+	ENSURE( b3Shape_IsValid( remaining[2] ) );
+	ENSURE_SMALL( b3Body_GetMass( bodyId ) - 2.0f * shapeMass, 1e-5f );
+
+	// A zero-sized body range is a no-op, and a full range handles both list ends.
+	b3Body_DestroyShapes( bodyId, 2, 0 );
+	ENSURE( b3Body_GetShapeCount( bodyId ) == 2 );
+	b3Body_DestroyShapes( bodyId, 0, 2 );
+	ENSURE( b3Body_GetShapeCount( bodyId ) == 0 );
+	ENSURE( b3Shape_IsValid( remaining[0] ) == false );
+	ENSURE( b3Shape_IsValid( remaining[2] ) == false );
+
+	b3DestroyWorld( worldId );
+	return 0;
+}
+
 int BodyTest( void )
 {
 	RUN_SUBTEST( FarSingleSphereMass );
@@ -395,5 +467,6 @@ int BodyTest( void )
 	RUN_SUBTEST( SetMassDataFixedRotation );
 	RUN_SUBTEST( SetMassDataZeroMass );
 	RUN_SUBTEST( SetMassDataConsistentVelocity );
+	RUN_SUBTEST( DestroyShapeRanges );
 	return 0;
 }

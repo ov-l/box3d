@@ -111,6 +111,10 @@ set(CMAKE_VISIBILITY_INLINES_HIDDEN 1)
 
 add_library(box3d ${BOX3D_SOURCE_FILES} ${BOX3D_INCLUDE_FILES})
 
+# Public because B3_MAX_WORLDS is used by the public headers and must agree
+# between the library and its consumers.
+target_compile_definitions(box3d PUBLIC B3_MAX_WORLDS=${B3_MAX_WORLDS})
+
 # target_link_libraries(box3d PRIVATE eastl)
 
 target_include_directories(box3d
