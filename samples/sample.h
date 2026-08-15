@@ -215,7 +215,7 @@ public:
 	int m_textLine;
 	int m_textIncrement;
 	int m_triangleIndex;
-	uint64_t m_userMaterialId;
+	uint32_t m_userMaterialId;
 
 	// Active recording, or null when not recording. The step recording began on drives the status.
 	struct b3Recording* m_recording;
@@ -286,11 +286,11 @@ struct CastClosestContext
 	b3Pos point;
 	b3Vec3 normal;
 	float fraction;
-	uint64_t materialId;
+	uint32_t materialId;
 	int childIndex;
 	int triangleIndex;
 	bool hit;
 };
 
-float CastClosestCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t materialId, int triangleIndex,
+float CastClosestCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t materialId, int triangleIndex,
 						   int childIndex, void* context );

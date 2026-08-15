@@ -911,7 +911,7 @@ public:
 	}
 
 	// This callback finds the closest hit.
-	static float CastCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t surfaceType,
+	static float CastCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t surfaceType,
 							   int triangleIndex, int childIndex, void* context )
 	{
 		(void)shapeId;

@@ -274,7 +274,7 @@ b3RayResult b3RecR_RAYRESULT( b3RecReader* rdr )
 	v.shapeId = b3RecR_SHAPEID( rdr );
 	v.point = b3RecR_POSITION( rdr );
 	v.normal = b3RecR_VEC3( rdr );
-	v.userMaterialId = b3RecR_U64( rdr );
+	v.userMaterialId = b3RecR_U32( rdr );
 	v.fraction = b3RecR_F32( rdr );
 	v.triangleIndex = b3RecR_I32( rdr );
 	v.childIndex = b3RecR_I32( rdr );
@@ -346,7 +346,7 @@ b3SurfaceMaterial b3RecR_MATERIAL( b3RecReader* rdr )
 	m.restitution = b3RecR_F32( rdr );
 	m.rollingResistance = b3RecR_F32( rdr );
 	m.tangentVelocity = b3RecR_VEC3( rdr );
-	m.userMaterialId = b3RecR_U64( rdr );
+	m.userMaterialId = b3RecR_U32( rdr );
 	m.customColor = b3RecR_U32( rdr );
 	return m;
 }
@@ -1770,7 +1770,7 @@ static bool b3RecReplayMoverFilterTrampoline( b3ShapeId id, void* ctx )
 	return b3RecReplayOverlapTrampoline( id, ctx );
 }
 
-static float b3RecReplayCastTrampoline( b3ShapeId id, b3Pos point, b3Vec3 normal, float fraction, uint64_t userMaterialId,
+static float b3RecReplayCastTrampoline( b3ShapeId id, b3Pos point, b3Vec3 normal, float fraction, uint32_t userMaterialId,
 										int triangleIndex, int childIndex, void* ctx )
 {
 	b3RecReplayQueryCtx* rc = ctx;
@@ -1963,7 +1963,7 @@ static void b3RecDispatch_QueryCastRay( const b3RecArgs_QueryCastRay* a, b3RecRe
 		rdr->hits[i].point = b3RecR_POSITION( rdr );
 		rdr->hits[i].normal = b3RecR_VEC3( rdr );
 		rdr->hits[i].fraction = b3RecR_F32( rdr );
-		rdr->hits[i].userMaterialId = b3RecR_U64( rdr );
+		rdr->hits[i].userMaterialId = b3RecR_U32( rdr );
 		rdr->hits[i].triangleIndex = b3RecR_I32( rdr );
 		rdr->hits[i].childIndex = b3RecR_I32( rdr );
 		rdr->hits[i].userReturnF = b3RecR_F32( rdr );
@@ -1997,7 +1997,7 @@ static void b3RecDispatch_QueryCastShape( const b3RecArgs_QueryCastShape* a, b3R
 		rdr->hits[i].point = b3RecR_POSITION( rdr );
 		rdr->hits[i].normal = b3RecR_VEC3( rdr );
 		rdr->hits[i].fraction = b3RecR_F32( rdr );
-		rdr->hits[i].userMaterialId = b3RecR_U64( rdr );
+		rdr->hits[i].userMaterialId = b3RecR_U32( rdr );
 		rdr->hits[i].triangleIndex = b3RecR_I32( rdr );
 		rdr->hits[i].childIndex = b3RecR_I32( rdr );
 		rdr->hits[i].userReturnF = b3RecR_F32( rdr );

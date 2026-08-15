@@ -14,7 +14,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-static b3SurfaceMaterial MakeMaterial( float friction, uint64_t userId )
+static b3SurfaceMaterial MakeMaterial( float friction, uint32_t userId )
 {
 	b3SurfaceMaterial m = b3DefaultSurfaceMaterial();
 	m.friction = friction;
@@ -165,7 +165,7 @@ static int CompoundMaterialDistinct( void )
 	for ( int i = 0; i < 3; ++i )
 	{
 		caps[i].capsule = (b3Capsule){ { (float)i, 0, 0 }, { (float)i + 1, 0, 0 }, 0.25f };
-		caps[i].material = MakeMaterial( 0.1f * (float)( i + 1 ), (uint64_t)( i + 1 ) );
+	caps[i].material = MakeMaterial( 0.1f * (float)( i + 1 ), (uint32_t)( i + 1 ) );
 	}
 
 	b3CompoundDef def = { .capsules = caps, .capsuleCount = 3 };
@@ -179,7 +179,7 @@ static int CompoundMaterialDistinct( void )
 	{
 		b3CompoundCapsule cc = b3GetCompoundCapsule( c, i );
 		ENSURE( cc.materialIndex >= 0 && cc.materialIndex < 3 );
-		ENSURE( mats[cc.materialIndex].userMaterialId == (uint64_t)( i + 1 ) );
+		ENSURE( mats[cc.materialIndex].userMaterialId == (uint32_t)( i + 1 ) );
 	}
 
 	b3DestroyCompound( c );

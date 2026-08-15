@@ -151,13 +151,13 @@ static void b3DefaultFinishTaskFcn( void* userTask, void* userContext )
 	B3_UNUSED( userContext );
 }
 
-static float b3DefaultFrictionCallback( float frictionA, uint64_t materialA, float frictionB, uint64_t materialB )
+static float b3DefaultFrictionCallback( float frictionA, uint32_t materialA, float frictionB, uint32_t materialB )
 {
 	B3_UNUSED( materialA, materialB );
 	return sqrtf( frictionA * frictionB );
 }
 
-static float b3DefaultRestitutionCallback( float restitutionA, uint64_t materialA, float restitutionB, uint64_t materialB )
+static float b3DefaultRestitutionCallback( float restitutionA, uint32_t materialA, float restitutionB, uint32_t materialB )
 {
 	B3_UNUSED( materialA, materialB );
 	return b3MaxFloat( restitutionA, restitutionB );
@@ -2877,7 +2877,7 @@ static float RayCastCallback( const b3RayCastInput* input, int proxyId, uint64_t
 		b3ShapeId id = { shapeId + 1, world->worldId, shape->generation };
 		b3Pos point = b3OffsetPos( worldContext->origin, output.point );
 		int materialIndex = b3ClampInt( output.materialIndex, 0, shape->materialCount - 1 );
-		uint64_t userMaterialId = b3GetShapeMaterials( shape )[materialIndex].userMaterialId;
+		uint32_t userMaterialId = b3GetShapeMaterials( shape )[materialIndex].userMaterialId;
 
 		int triangleIndex = output.triangleIndex;
 		int childIndex = output.childIndex;
@@ -2956,7 +2956,7 @@ b3TreeStats b3World_CastRay( b3WorldId worldId, b3Pos origin, b3Vec3 translation
 }
 
 // This callback finds the closest hit. This is the most common callback used in games.
-static float b3RayCastClosestFcn( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t userMaterialId,
+static float b3RayCastClosestFcn( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t userMaterialId,
 								  int triangleIndex, int childIndex, void* context )
 {
 	// Ignore initial overlap
@@ -3077,7 +3077,7 @@ static float b3ShapeCastCallback( const b3BoxCastInput* input, int proxyId, uint
 	{
 		b3ShapeId id = { shapeId + 1, world->worldId, shape->generation };
 		int materialIndex = b3ClampInt( output.materialIndex, 0, shape->materialCount - 1 );
-		uint64_t userMaterialId = b3GetShapeMaterials( shape )[materialIndex].userMaterialId;
+		uint32_t userMaterialId = b3GetShapeMaterials( shape )[materialIndex].userMaterialId;
 
 		int triangleIndex = output.triangleIndex;
 		int childIndex = output.childIndex;

@@ -740,7 +740,7 @@ static bool QueryReplayOverlapFcn( b3ShapeId shapeId, void* context )
 	return true;
 }
 
-static float QueryReplayCastFcn( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t userMaterialId,
+static float QueryReplayCastFcn( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t userMaterialId,
 								 int triangleIndex, int childIndex, void* context )
 {
 	(void)shapeId;

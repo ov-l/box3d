@@ -19,7 +19,7 @@ typedef struct b3RecRecordedHit
 	b3Pos point;
 	b3Vec3 normal;
 	float fraction;
-	uint64_t userMaterialId;
+	uint32_t userMaterialId;
 	int triangleIndex;
 	int childIndex;
 	b3PlaneResult plane; // collide-mover: this plane

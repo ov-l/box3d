@@ -595,7 +595,7 @@ struct ClosestShapeCastContext
 	bool startedSolid;
 };
 
-static float ClosestShapeCastCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t userMaterialId,
+static float ClosestShapeCastCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t userMaterialId,
 									   int triangleIndex, int childIndex, void* context )
 {
 	auto* ctx = static_cast<ClosestShapeCastContext*>( context );

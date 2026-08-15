@@ -250,7 +250,7 @@ static bool QuerySpawnOverlapCallback( b3ShapeId shapeId, void* context )
 	return true;
 }
 
-static float QuerySpawnCastCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t userMaterialId,
+static float QuerySpawnCastCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t userMaterialId,
 									 int triangleIndex, int childIndex, void* context )
 {
 	(void)shapeId, (void)point, (void)normal, (void)userMaterialId, (void)triangleIndex, (void)childIndex;

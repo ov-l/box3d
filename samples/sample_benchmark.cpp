@@ -500,7 +500,7 @@ public:
 		bool hit;
 	};
 
-	static float CastCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t userMaterialId,
+	static float CastCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t userMaterialId,
 							   int triangleIndex, int childIndex, void* context )
 	{
 		(void)shapeId;

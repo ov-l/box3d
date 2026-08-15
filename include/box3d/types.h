@@ -51,13 +51,13 @@ typedef void b3DestroyDebugShapeCallback( void* userShape, void* userContext );
 /// from a worker thread.
 /// @warning This function should not attempt to modify Box3D state or user application state.
 /// @ingroup world
-typedef float b3FrictionCallback( float frictionA, uint64_t userMaterialIdA, float frictionB, uint64_t userMaterialIdB );
+typedef float b3FrictionCallback( float frictionA, uint32_t userMaterialIdA, float frictionB, uint32_t userMaterialIdB );
 
 /// Optional restitution mixing callback. This intentionally provides no context objects because this is called
 /// from a worker thread.
 /// @warning This function should not attempt to modify Box3D state or user application state.
 /// @ingroup world
-typedef float b3RestitutionCallback( float restitutionA, uint64_t userMaterialIdA, float restitutionB, uint64_t userMaterialIdB );
+typedef float b3RestitutionCallback( float restitutionA, uint32_t userMaterialIdA, float restitutionB, uint32_t userMaterialIdB );
 
 /// Prototype for a contact filter callback.
 /// This is called when a contact pair is considered for collision. This allows you to
@@ -112,7 +112,7 @@ typedef bool b3OverlapResultFcn( b3ShapeId shapeId, void* context );
 /// @return -1 to filter, 0 to terminate, fraction to clip the ray for closest hit, 1 to continue
 /// @see b3World_CastRay
 /// @ingroup world
-typedef float b3CastResultFcn( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t userMaterialId,
+typedef float b3CastResultFcn( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t userMaterialId,
 							   int triangleIndex, int childIndex, void* context );
 
 /// Optional world capacities that can be use to avoid run-time allocations
@@ -413,7 +413,7 @@ typedef struct b3SurfaceMaterial
 
 	/// User material identifier. This is passed with query results and to friction and restitution
 	/// combining functions. It is not used internally.
-	uint64_t userMaterialId;
+	uint32_t userMaterialId;
 
 	/// Custom debug draw color. Ignored if 0. The low 24 bits are RGB. The high byte may
 	/// carry a b3DebugMaterial preset, see b3MakeDebugColor.
@@ -1166,10 +1166,10 @@ typedef struct b3ContactHitEvent
 	float approachSpeed;
 
 	/// User material on shape A
-	uint64_t userMaterialIdA;
+	uint32_t userMaterialIdA;
 
 	/// User material on shape B
-	uint64_t userMaterialIdB;
+	uint32_t userMaterialIdB;
 
 } b3ContactHitEvent;
 
@@ -1344,7 +1344,7 @@ typedef struct b3RayResult
 
 	/// The user material id at the hit point. This can be per triangle
 	/// if the shape is a mesh, height-field, or compound with child mesh.
-	uint64_t userMaterialId;
+	uint32_t userMaterialId;
 
 	/// The fraction of the input ray.
 	float fraction;
@@ -1499,7 +1499,7 @@ typedef struct b3BodyCastResult
 
 	/// The user material id at the hit point. This can be per triangle
 	/// if the shape is a mesh, height-field, or compound with child mesh.
-	uint64_t userMaterialId;
+	uint32_t userMaterialId;
 
 	/// The number of iterations used. Diagnostic.
 	int iterations;

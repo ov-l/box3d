@@ -608,7 +608,7 @@ b3BodyCastResult b3Body_CastRay( b3BodyId bodyId, b3Pos origin, b3Vec3 translati
 		b3ShapeId id = { shape->id + 1, bodyId.world0, shape->generation };
 
 		int materialIndex = b3ClampInt( shapeOutput.materialIndex, 0, shape->materialCount - 1 );
-		uint64_t userMaterialId = b3GetShapeMaterials( shape )[materialIndex].userMaterialId;
+		uint32_t userMaterialId = b3GetShapeMaterials( shape )[materialIndex].userMaterialId;
 
 		result = (b3BodyCastResult){
 			.shapeId = id,
@@ -673,7 +673,7 @@ b3BodyCastResult b3Body_CastShape( b3BodyId bodyId, b3Pos origin, const b3ShapeP
 		// Careful with id, shapeId is the next shape.
 		b3ShapeId id = { shape->id + 1, bodyId.world0, shape->generation };
 		int materialIndex = b3ClampInt( shapeOutput.materialIndex, 0, shape->materialCount - 1 );
-		uint64_t userMaterialId = b3GetShapeMaterials( shape )[materialIndex].userMaterialId;
+		uint32_t userMaterialId = b3GetShapeMaterials( shape )[materialIndex].userMaterialId;
 
 		result = (b3BodyCastResult){
 			.shapeId = id,

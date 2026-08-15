@@ -205,7 +205,7 @@ void b3RecW_RAYRESULT( b3RecBuffer* buf, b3RayResult v )
 	b3RecW_SHAPEID( buf, v.shapeId );
 	b3RecW_POSITION( buf, v.point );
 	b3RecW_VEC3( buf, v.normal );
-	b3RecW_U64( buf, v.userMaterialId );
+	b3RecW_U32( buf, v.userMaterialId );
 	b3RecW_F32( buf, v.fraction );
 	b3RecW_I32( buf, v.triangleIndex );
 	b3RecW_I32( buf, v.childIndex );
@@ -268,7 +268,7 @@ void b3RecW_MATERIAL( b3RecBuffer* buf, b3SurfaceMaterial v )
 	b3RecW_F32( buf, v.restitution );
 	b3RecW_F32( buf, v.rollingResistance );
 	b3RecW_VEC3( buf, v.tangentVelocity );
-	b3RecW_U64( buf, v.userMaterialId );
+	b3RecW_U32( buf, v.userMaterialId );
 	b3RecW_U32( buf, v.customColor );
 }
 
@@ -319,7 +319,7 @@ _Static_assert( sizeof( void* ) != 8 || sizeof( b3ExplosionDef ) == 32 || sizeof
 				"b3ExplosionDef changed: update b3RecW_EXPLOSIONDEF and b3RecR_EXPLOSIONDEF together" );
 _Static_assert( sizeof( void* ) != 8 || sizeof( b3BodyDef ) == 104 || sizeof( b3BodyDef ) == 120,
 				"b3BodyDef changed: update b3RecW_BODYDEF and b3RecR_BODYDEF together" );
-_Static_assert( sizeof( void* ) != 8 || sizeof( b3ShapeDef ) == 120,
+_Static_assert( sizeof( void* ) != 8 || sizeof( b3ShapeDef ) == 112,
 				"b3ShapeDef changed: update b3RecW_SHAPEDEF and b3RecR_SHAPEDEF together" );
 _Static_assert( sizeof( void* ) != 8 || sizeof( b3ParallelJointDef ) == 128,
 				"b3ParallelJointDef changed: update b3RecW_PARALLELJOINTDEF and its reader together" );
@@ -628,7 +628,7 @@ bool b3RecOverlapTrampoline( b3ShapeId id, void* ctx )
 	return ret;
 }
 
-float b3RecCastTrampoline( b3ShapeId id, b3Pos point, b3Vec3 normal, float fraction, uint64_t userMaterialId, int triangleIndex,
+float b3RecCastTrampoline( b3ShapeId id, b3Pos point, b3Vec3 normal, float fraction, uint32_t userMaterialId, int triangleIndex,
 						   int childIndex, void* ctx )
 {
 	b3RecQueryWriter* w = (b3RecQueryWriter*)ctx;
@@ -637,7 +637,7 @@ float b3RecCastTrampoline( b3ShapeId id, b3Pos point, b3Vec3 normal, float fract
 	b3RecW_POSITION( &w->buf, point );
 	b3RecW_VEC3( &w->buf, normal );
 	b3RecW_F32( &w->buf, fraction );
-	b3RecW_U64( &w->buf, userMaterialId );
+	b3RecW_U32( &w->buf, userMaterialId );
 	b3RecW_I32( &w->buf, triangleIndex );
 	b3RecW_I32( &w->buf, childIndex );
 	b3RecW_F32( &w->buf, ret );

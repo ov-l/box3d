@@ -346,7 +346,7 @@ void b3RecQueryCommit( b3Recording* rec, uint8_t opcode, b3RecQueryWriter* w );
 // Recording trampolines: replace the user fcn so hits are captured before dispatch. The overlap
 // trampoline doubles for the mover filter, which has the same bool(shapeId, ctx) shape.
 bool b3RecOverlapTrampoline( b3ShapeId id, void* ctx );
-float b3RecCastTrampoline( b3ShapeId id, b3Pos point, b3Vec3 normal, float fraction, uint64_t userMaterialId, int triangleIndex,
+float b3RecCastTrampoline( b3ShapeId id, b3Pos point, b3Vec3 normal, float fraction, uint32_t userMaterialId, int triangleIndex,
 						   int childIndex, void* ctx );
 bool b3RecPlaneTrampoline( b3ShapeId id, const b3PlaneResult* planes, int planeCount, void* ctx );
 

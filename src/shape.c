@@ -2512,7 +2512,7 @@ b3TOIOutput b3ShapeTimeOfImpact( b3Shape* shapeA, b3Shape* shapeB, b3Sweep* swee
 // the contact's childIndex to find the participating child, then for a mesh child apply the
 // child's materialIndices indirection on top of the per-triangle index. Convex shapes fall
 // back to materials[0]. childIndex is unused for non-compound shapes.
-uint64_t b3GetShapeUserMaterialId( const b3Shape* shape, int childIndex, int triangleIndex )
+uint32_t b3GetShapeUserMaterialId( const b3Shape* shape, int childIndex, int triangleIndex )
 {
 	if ( shape->materialCount == 0 )
 	{

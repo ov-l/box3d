@@ -487,8 +487,8 @@ static int TestHitEvents( void )
 
 	int hitCount = 0;
 	float capturedSpeed = 0.0f;
-	uint64_t capturedMaterialA = 0;
-	uint64_t capturedMaterialB = 0;
+	uint32_t capturedMaterialA = 0;
+	uint32_t capturedMaterialB = 0;
 	b3Vec3 capturedNormal = { 0.0f, 0.0f, 0.0f };
 
 	for ( int i = 0; i < 30; ++i )
@@ -527,14 +527,14 @@ static int TestHitEvents( void )
 // materials[0] and the strike on hull 1 would be misattributed.
 static int TestCompoundHitEvents( void )
 {
-	const uint64_t kHullMaterialA = 11;
-	const uint64_t kHullMaterialB = 22;
-	const uint64_t kSphereMaterial = 99;
+	const uint32_t kHullMaterialA = 11;
+	const uint32_t kHullMaterialB = 22;
+	const uint32_t kSphereMaterial = 99;
 	const float kHullCenterX = 3.0f;
 
 	for ( int side = 0; side < 2; ++side )
 	{
-		uint64_t expectedHullMaterial = ( side == 0 ) ? kHullMaterialA : kHullMaterialB;
+		uint32_t expectedHullMaterial = ( side == 0 ) ? kHullMaterialA : kHullMaterialB;
 		float spawnX = ( side == 0 ) ? -kHullCenterX : kHullCenterX;
 
 		b3WorldDef worldDef = b3DefaultWorldDef();
@@ -587,8 +587,8 @@ static int TestCompoundHitEvents( void )
 		b3CreateSphereShape( sphereBodyId, &sphereShapeDef, &sphere );
 
 		int hitCount = 0;
-		uint64_t capturedMaterialA = 0;
-		uint64_t capturedMaterialB = 0;
+		uint32_t capturedMaterialA = 0;
+		uint32_t capturedMaterialB = 0;
 
 		for ( int i = 0; i < 30; ++i )
 		{
@@ -634,7 +634,7 @@ static struct
 	float mixedFriction;
 } materialCapture;
 
-static float CaptureFrictionMix( float frictionA, uint64_t userMaterialIdA, float frictionB, uint64_t userMaterialIdB )
+static float CaptureFrictionMix( float frictionA, uint32_t userMaterialIdA, float frictionB, uint32_t userMaterialIdB )
 {
 	materialCapture.callCount += 1;
 

@@ -172,7 +172,7 @@ typedef struct CastContext
 	float relX;
 } CastContext;
 
-static float QueryCastCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t materialId,
+static float QueryCastCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t materialId,
 								int triangleIndex, int childIndex, void* context )
 {
 	(void)shapeId, (void)normal, (void)materialId, (void)triangleIndex, (void)childIndex;

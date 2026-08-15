@@ -123,7 +123,7 @@ struct CastContext
 	b3Pos points[3];
 	b3Vec3 normals[3];
 	float fractions[3];
-	uint64_t materialIds[3];
+	uint32_t materialIds[3];
 	int triangleIndices[3];
 	int childIndices[3];
 	int count;
@@ -131,7 +131,7 @@ struct CastContext
 };
 
 // This callback finds the closest hit. This is the most common callback used in games.
-static float RayCastClosestCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t materialId,
+static float RayCastClosestCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t materialId,
 									 int triangleIndex, int childIndex, void* context )
 {
 	CastContext* rayContext = (CastContext*)context;
@@ -170,7 +170,7 @@ static float RayCastClosestCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 norm
 // This callback finds any hit. For this type of query we are usually just checking for obstruction,
 // so the hit data is not relevant.
 // NOTE: shape hits are not ordered, so this may not return the closest hit
-static float RayCastAnyCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t materialId,
+static float RayCastAnyCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t materialId,
 								 int triangleIndex, int childIndex, void* context )
 {
 	CastContext* rayContext = (CastContext*)context;
@@ -210,7 +210,7 @@ static float RayCastAnyCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, 
 // NOTE: shape hits are not ordered, so this may return hits in any order. This means that
 // if you limit the number of results, you may discard the closest hit. You can see this
 // behavior in the sample.
-static float RayCastMultipleCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t materialId,
+static float RayCastMultipleCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t materialId,
 									  int triangleIndex, int childIndex, void* context )
 {
 	CastContext* rayContext = (CastContext*)context;
@@ -254,7 +254,7 @@ static float RayCastMultipleCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 nor
 }
 
 // This ray cast collects multiple hits along the ray and sorts them.
-static float RayCastSortedCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t materialId,
+static float RayCastSortedCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t materialId,
 									int triangleIndex, int childIndex, void* context )
 {
 	CastContext* rayContext = (CastContext*)context;

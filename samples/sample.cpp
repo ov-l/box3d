@@ -2161,7 +2161,7 @@ void Sample::ToggleThirdPerson()
 	}
 }
 
-float CastClosestCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint64_t materialId, int triangleIndex,
+float CastClosestCallback( b3ShapeId shapeId, b3Pos point, b3Vec3 normal, float fraction, uint32_t materialId, int triangleIndex,
 						   int childIndex, void* context )
 {
 	CastClosestContext* rayContext = (CastClosestContext*)context;
