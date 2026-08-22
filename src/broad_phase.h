@@ -28,6 +28,9 @@ typedef struct b3BroadPhase
 {
 	b3DynamicTree trees[b3_bodyTypeCount];
 
+	// Monotonic proxy revision used to invalidate external static spatial caches.
+	uint64_t staticRevision;
+
 	// Per body-type bit sets indexed by proxyId, marking proxies moved this step.
 	// Paired with moveArray which preserves deterministic insertion order for pair queries.
 	b3BitSet movedProxies[b3_bodyTypeCount];

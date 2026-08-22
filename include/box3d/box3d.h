@@ -11,6 +11,9 @@
 
 #include <stdbool.h>
 
+/// Opaque cache used to accelerate repeated character mover casts.
+typedef struct b3MoverCache b3MoverCache;
+
 /**
  * @defgroup world World
  * These functions allow you to create a simulation world.
@@ -117,6 +120,38 @@ B3_API b3TreeStats b3World_CastShape( b3WorldId worldId, b3Pos origin, const b3S
 /// @return the translation fraction
 B3_API float b3World_CastMover( b3WorldId worldId, b3Pos origin, const b3Capsule* mover, b3Vec3 translation, b3QueryFilter filter,
 								b3MoverFilterFcn* fcn, void* context );
+
+/// Create a cache for repeated character mover casts. A cache is independent of a world and may be reused after a world is
+/// destroyed. Use one cache per concurrently moving character.
+B3_API b3MoverCache* b3CreateMoverCache( void );
+
+/// Destroy a character mover cache.
+B3_API void b3DestroyMoverCache( b3MoverCache* cache );
+
+/// Clear a character mover cache and its diagnostics while retaining its allocated storage.
+B3_API void b3MoverCache_Clear( b3MoverCache* cache );
+
+/// Get character mover cache diagnostics.
+B3_API b3MoverCacheStats b3MoverCache_GetStats( const b3MoverCache* cache );
+
+/// Cast a capsule mover using a conservative cache of nearby static shapes. Cached static candidates are tested exactly while
+/// kinematic and dynamic shapes are always queried from the world, producing the same collision fraction as b3World_CastMover.
+/// The first cast, a cast outside the cached region, or a static-world change falls back to b3World_CastMover and refreshes the
+/// cache for later calls.
+///
+/// @param worldId World to cast the mover against
+/// @param origin World position the mover capsule is relative to
+/// @param mover Capsule mover, relative to the origin
+/// @param translation Desired mover translation
+/// @param cache Cache created by b3CreateMoverCache
+/// @param cacheExtent Extra distance around the swept mover to retain static candidates. Must be non-negative.
+/// @param filter Contains bit flags to filter unwanted shapes from the results
+/// @param fcn Optional callback for custom shape filtering
+/// @param context A user context that is passed along to the callback function
+/// @return the translation fraction
+B3_API float b3World_CastMoverCached( b3WorldId worldId, b3Pos origin, const b3Capsule* mover, b3Vec3 translation,
+								  b3MoverCache* cache, float cacheExtent, b3QueryFilter filter, b3MoverFilterFcn* fcn,
+								  void* context );
 
 /// Collide a capsule mover with the world, gathering collision planes that can be fed to b3SolvePlanes. Useful for
 /// kinematic character movement. The mover and the returned planes are relative to the origin.

@@ -6,6 +6,7 @@
 #include "box3d/types.h"
 
 class Sample;
+typedef struct b3MoverCache b3MoverCache;
 
 struct MoverShapeUserData
 {
@@ -21,6 +22,10 @@ struct PlaneExtra
 
 struct CharacterMover
 {
+	CharacterMover() = default;
+	CharacterMover( const CharacterMover& ) = delete;
+	CharacterMover& operator=( const CharacterMover& ) = delete;
+
 	static constexpr int m_planeCapacity = 8;
 	static constexpr float m_jumpSpeed = 5.0f;
 	static constexpr float m_maxSpeed = 6.0f;
@@ -31,6 +36,7 @@ struct CharacterMover
 	static constexpr float m_gravity = 15.0f;
 
 	void Initialize( Sample* sample, b3Pos position );
+	~CharacterMover();
 	void SolveMove( float timeStep, b3Vec3 forward, b3Vec3 right, b3Vec2 throttle, bool clipVelocity );
 	void Step( b3ShapeId* ignoreShapes, int ignoreCount, bool clipVelocity );
 
@@ -45,6 +51,7 @@ struct CharacterMover
 	float m_pogoVelocity;
 	bool m_onGround;
 	bool m_sprint;
+	b3MoverCache* m_castCache = nullptr;
 
 	// Transient
 	b3ShapeId* m_ignoreShapeIds;

@@ -1857,6 +1857,19 @@ typedef struct b3BodyPlaneResult
 	b3PlaneResult result;
 } b3BodyPlaneResult;
 
+/// Diagnostics for a character mover cache.
+typedef struct b3MoverCacheStats
+{
+	/// Number of cached static shape candidates.
+	int candidateCount;
+
+	/// Number of casts served using the cached static candidates.
+	uint64_t hitCount;
+
+	/// Number of casts that rebuilt or bypassed the cache.
+	uint64_t missCount;
+} b3MoverCacheStats;
+
 /// Used to collect collision planes for character movers.
 /// Return true to continue gathering planes.
 typedef bool b3PlaneResultFcn( b3ShapeId shapeId, const b3PlaneResult* plane, int planeCount, void* context );

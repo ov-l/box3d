@@ -6,6 +6,7 @@
 // b3CollideMoverAndSphere / Capsule / Hull are internal
 #include "shape.h"
 
+#include "box3d/box3d.h"
 #include "box3d/collision.h"
 
 static int ParallelPlanes( void )
@@ -233,6 +234,237 @@ static int MoverHullDeepOverlap( void )
 	return 0;
 }
 
+static b3BodyId CreateMoverWall( b3WorldId worldId, b3Pos position, b3BodyType type, uint64_t categoryBits )
+{
+	b3BodyDef bodyDef = b3DefaultBodyDef();
+	bodyDef.type = type;
+	bodyDef.position = position;
+	b3BodyId bodyId = b3CreateBody( worldId, &bodyDef );
+
+	b3ShapeDef shapeDef = b3DefaultShapeDef();
+	shapeDef.filter.categoryBits = categoryBits;
+	b3BoxHull box = b3MakeBoxHull( 0.1f, 1.0f, 1.0f );
+	b3CreateHullShape( bodyId, &shapeDef, &box.base );
+	return bodyId;
+}
+
+static int MoverCacheStaticHit( void )
+{
+	b3WorldDef worldDef = b3DefaultWorldDef();
+	worldDef.gravity = b3Vec3_zero;
+	b3WorldId worldId = b3CreateWorld( &worldDef );
+	CreateMoverWall( worldId, (b3Pos){ 2.0f, 0.0f, 0.0f }, b3_staticBody, 1 );
+
+	b3Capsule mover = { { 0.0f, -0.4f, 0.0f }, { 0.0f, 0.4f, 0.0f }, 0.25f };
+	b3Vec3 translation = { 4.0f, 0.0f, 0.0f };
+	b3QueryFilter filter = b3DefaultQueryFilter();
+	filter.maskBits = 1;
+	b3MoverCache* cache = b3CreateMoverCache();
+
+	float expected = b3World_CastMover( worldId, b3Pos_zero, &mover, translation, filter, NULL, NULL );
+	float first = b3World_CastMoverCached( worldId, b3Pos_zero, &mover, translation, cache, 2.0f, filter, NULL, NULL );
+	b3MoverCacheStats stats = b3MoverCache_GetStats( cache );
+	ENSURE_SMALL( first - expected, 1e-6f );
+	ENSURE( stats.missCount == 1 && stats.hitCount == 0 && stats.candidateCount == 1 );
+
+	float second = b3World_CastMoverCached( worldId, b3Pos_zero, &mover, translation, cache, 2.0f, filter, NULL, NULL );
+	stats = b3MoverCache_GetStats( cache );
+	ENSURE_SMALL( second - expected, 1e-6f );
+	ENSURE( stats.missCount == 1 && stats.hitCount == 1 );
+
+	// Leaving the retained region refreshes rather than incorrectly trusting the old candidates.
+	b3Pos farOrigin = { 20.0f, 0.0f, 0.0f };
+	ENSURE( b3World_CastMoverCached( worldId, farOrigin, &mover, translation, cache, 2.0f, filter, NULL, NULL ) == 1.0f );
+	stats = b3MoverCache_GetStats( cache );
+	ENSURE( stats.missCount == 2 );
+
+	b3MoverCache_Clear( cache );
+	stats = b3MoverCache_GetStats( cache );
+	ENSURE( stats.missCount == 0 && stats.hitCount == 0 && stats.candidateCount == 0 );
+	b3DestroyMoverCache( cache );
+	b3DestroyWorld( worldId );
+	return 0;
+}
+
+static int MoverCacheInvalidation( void )
+{
+	b3WorldDef worldDef = b3DefaultWorldDef();
+	worldDef.gravity = b3Vec3_zero;
+	b3WorldId worldId = b3CreateWorld( &worldDef );
+	b3BodyId wallId = CreateMoverWall( worldId, (b3Pos){ 4.0f, 0.0f, 0.0f }, b3_staticBody, 1 );
+
+	b3Capsule mover = { { 0.0f, -0.4f, 0.0f }, { 0.0f, 0.4f, 0.0f }, 0.25f };
+	b3Vec3 translation = { 2.0f, 0.0f, 0.0f };
+	b3QueryFilter filter = b3DefaultQueryFilter();
+	filter.maskBits = 1;
+	b3MoverCache* cache = b3CreateMoverCache();
+
+	ENSURE( b3World_CastMoverCached( worldId, b3Pos_zero, &mover, translation, cache, 4.0f, filter, NULL, NULL ) == 1.0f );
+	ENSURE( b3World_CastMoverCached( worldId, b3Pos_zero, &mover, translation, cache, 4.0f, filter, NULL, NULL ) == 1.0f );
+	b3MoverCacheStats stats = b3MoverCache_GetStats( cache );
+	ENSURE( stats.missCount == 1 && stats.hitCount == 1 );
+
+	// A static proxy move invalidates the candidate region before the next cast.
+	b3Body_SetTransform( wallId, (b3Pos){ 1.0f, 0.0f, 0.0f }, b3Quat_identity );
+	float fraction = b3World_CastMoverCached( worldId, b3Pos_zero, &mover, translation, cache, 4.0f, filter, NULL, NULL );
+	stats = b3MoverCache_GetStats( cache );
+	ENSURE( fraction < 1.0f );
+	ENSURE( stats.missCount == 2 && stats.hitCount == 1 );
+
+	// Origin shifting changes every cached world-space bound and also invalidates the cache.
+	b3World_ShiftOrigin( worldId, (b3Vec3){ 100.0f, 0.0f, 0.0f } );
+	b3Pos shiftedOrigin = { 100.0f, 0.0f, 0.0f };
+	fraction = b3World_CastMoverCached( worldId, shiftedOrigin, &mover, translation, cache, 4.0f, filter, NULL, NULL );
+	stats = b3MoverCache_GetStats( cache );
+	ENSURE( fraction < 1.0f );
+	ENSURE( stats.missCount == 3 );
+
+	b3DestroyMoverCache( cache );
+	b3DestroyWorld( worldId );
+	return 0;
+}
+
+static int MoverCacheFilterInvalidation( void )
+{
+	b3WorldDef worldDef = b3DefaultWorldDef();
+	worldDef.gravity = b3Vec3_zero;
+	b3WorldId worldId = b3CreateWorld( &worldDef );
+	b3BodyId wallId = CreateMoverWall( worldId, (b3Pos){ 1.0f, 0.0f, 0.0f }, b3_staticBody, 2 );
+
+	b3Capsule mover = { { 0.0f, -0.4f, 0.0f }, { 0.0f, 0.4f, 0.0f }, 0.25f };
+	b3Vec3 translation = { 2.0f, 0.0f, 0.0f };
+	b3QueryFilter queryFilter = b3DefaultQueryFilter();
+	queryFilter.maskBits = 1;
+	b3MoverCache* cache = b3CreateMoverCache();
+
+	// The initial category is excluded, so the first cache contains no candidates.
+	ENSURE( b3World_CastMoverCached( worldId, b3Pos_zero, &mover, translation, cache, 2.0f, queryFilter, NULL, NULL ) ==
+			1.0f );
+	ENSURE( b3MoverCache_GetStats( cache ).candidateCount == 0 );
+
+	b3ShapeId shapeId;
+	ENSURE( b3Body_GetShapes( wallId, &shapeId, 1 ) == 1 );
+	b3Filter shapeFilter = b3Shape_GetFilter( shapeId );
+	shapeFilter.categoryBits = 1;
+	b3Shape_SetFilter( shapeId, shapeFilter, true );
+
+	// Changing static proxy categories invalidates and rebuilds the cache before use.
+	float expected = b3World_CastMover( worldId, b3Pos_zero, &mover, translation, queryFilter, NULL, NULL );
+	float fraction =
+		b3World_CastMoverCached( worldId, b3Pos_zero, &mover, translation, cache, 2.0f, queryFilter, NULL, NULL );
+	b3MoverCacheStats stats = b3MoverCache_GetStats( cache );
+	ENSURE_SMALL( fraction - expected, 1e-6f );
+	ENSURE( fraction < 1.0f );
+	ENSURE( stats.missCount == 2 && stats.candidateCount == 1 );
+
+	b3DestroyMoverCache( cache );
+	b3DestroyWorld( worldId );
+	return 0;
+}
+
+#if defined( BOX3D_DOUBLE_PRECISION )
+static int MoverCacheLargeWorld( void )
+{
+	b3WorldDef worldDef = b3DefaultWorldDef();
+	worldDef.gravity = b3Vec3_zero;
+	b3WorldId worldId = b3CreateWorld( &worldDef );
+	b3Pos origin = { 100000000.0, -200000000.0, 300000000.0 };
+	CreateMoverWall( worldId, (b3Pos){ origin.x + 2.0, origin.y, origin.z }, b3_staticBody, 1 );
+
+	b3Capsule mover = { { 0.0f, -0.4f, 0.0f }, { 0.0f, 0.4f, 0.0f }, 0.25f };
+	b3Vec3 translation = { 4.0f, 0.0f, 0.0f };
+	b3QueryFilter filter = b3DefaultQueryFilter();
+	b3MoverCache* cache = b3CreateMoverCache();
+	float expected = b3World_CastMover( worldId, origin, &mover, translation, filter, NULL, NULL );
+	b3World_CastMoverCached( worldId, origin, &mover, translation, cache, 2.0f, filter, NULL, NULL );
+	float actual = b3World_CastMoverCached( worldId, origin, &mover, translation, cache, 2.0f, filter, NULL, NULL );
+	ENSURE_SMALL( actual - expected, 1e-6f );
+	ENSURE( actual < 1.0f );
+	ENSURE( b3MoverCache_GetStats( cache ).hitCount == 1 );
+
+	b3DestroyMoverCache( cache );
+	b3DestroyWorld( worldId );
+	return 0;
+}
+#endif
+
+static int MoverCacheDynamicBody( void )
+{
+	b3WorldDef worldDef = b3DefaultWorldDef();
+	worldDef.gravity = b3Vec3_zero;
+	b3WorldId worldId = b3CreateWorld( &worldDef );
+	CreateMoverWall( worldId, (b3Pos){ 3.0f, 0.0f, 0.0f }, b3_staticBody, 1 );
+
+	b3Capsule mover = { { 0.0f, -0.4f, 0.0f }, { 0.0f, 0.4f, 0.0f }, 0.25f };
+	b3Vec3 translation = { 4.0f, 0.0f, 0.0f };
+	b3QueryFilter filter = b3DefaultQueryFilter();
+	filter.maskBits = 3;
+	b3MoverCache* cache = b3CreateMoverCache();
+	b3World_CastMoverCached( worldId, b3Pos_zero, &mover, translation, cache, 2.0f, filter, NULL, NULL );
+
+	// Dynamic creation does not invalidate the static cache. It must still be found by the per-call dynamic tree cast.
+	CreateMoverWall( worldId, (b3Pos){ 1.5f, 0.0f, 0.0f }, b3_dynamicBody, 2 );
+	float expected = b3World_CastMover( worldId, b3Pos_zero, &mover, translation, filter, NULL, NULL );
+	float fraction = b3World_CastMoverCached( worldId, b3Pos_zero, &mover, translation, cache, 2.0f, filter, NULL, NULL );
+	b3MoverCacheStats stats = b3MoverCache_GetStats( cache );
+	ENSURE_SMALL( fraction - expected, 1e-6f );
+	ENSURE( stats.missCount == 1 && stats.hitCount == 1 );
+
+	b3DestroyMoverCache( cache );
+	b3DestroyWorld( worldId );
+	return 0;
+}
+
+static int MoverCacheDifferential( void )
+{
+	b3WorldDef worldDef = b3DefaultWorldDef();
+	worldDef.gravity = b3Vec3_zero;
+	b3WorldId worldId = b3CreateWorld( &worldDef );
+
+	b3BodyId movingStatic = b3_nullBodyId;
+	for ( int i = 0; i < 12; ++i )
+	{
+		float x = 1.0f + 0.75f * (float)( i % 4 );
+		float z = -1.5f + (float)( i / 4 );
+		b3BodyId bodyId = CreateMoverWall( worldId, (b3Pos){ x, 0.0f, z }, b3_staticBody, 1 );
+		if ( i == 0 )
+		{
+			movingStatic = bodyId;
+		}
+	}
+	b3BodyId dynamicId = CreateMoverWall( worldId, (b3Pos){ 2.0f, 0.0f, 1.5f }, b3_dynamicBody, 2 );
+
+	b3Capsule mover = { { 0.0f, -0.35f, 0.0f }, { 0.0f, 0.35f, 0.0f }, 0.2f };
+	b3QueryFilter filter = b3DefaultQueryFilter();
+	filter.maskBits = 3;
+	b3MoverCache* cache = b3CreateMoverCache();
+
+	for ( int i = 0; i < 160; ++i )
+	{
+		if ( i > 0 && i % 37 == 0 )
+		{
+			float z = ( i / 37 ) % 2 == 0 ? -0.8f : 0.8f;
+			b3Body_SetTransform( movingStatic, (b3Pos){ 1.0f, 0.0f, z }, b3Quat_identity );
+		}
+
+		float dynamicZ = -1.4f + 0.02f * (float)( i % 120 );
+		b3Body_SetTransform( dynamicId, (b3Pos){ 2.0f, 0.0f, dynamicZ }, b3Quat_identity );
+
+		b3Pos origin = { -0.5f + 0.015f * (float)( i % 80 ), 0.0f, -0.9f + 0.03f * (float)( i % 60 ) };
+		b3Vec3 translation = { 2.5f + 0.01f * (float)( i % 7 ), 0.0f, 0.2f - 0.05f * (float)( i % 9 ) };
+		float expected = b3World_CastMover( worldId, origin, &mover, translation, filter, NULL, NULL );
+		float actual = b3World_CastMoverCached( worldId, origin, &mover, translation, cache, 1.5f, filter, NULL, NULL );
+		ENSURE_SMALL( actual - expected, 1e-6f );
+	}
+
+	b3MoverCacheStats stats = b3MoverCache_GetStats( cache );
+	ENSURE( stats.hitCount > stats.missCount );
+	ENSURE( stats.missCount >= 4 );
+	b3DestroyMoverCache( cache );
+	b3DestroyWorld( worldId );
+	return 0;
+}
+
 int MoverTest( void )
 {
 	RUN_SUBTEST( GamePlanes );
@@ -250,6 +482,15 @@ int MoverTest( void )
 	RUN_SUBTEST( MoverHullSeparated );
 	RUN_SUBTEST( MoverHullTouching );
 	RUN_SUBTEST( MoverHullDeepOverlap );
+
+	RUN_SUBTEST( MoverCacheStaticHit );
+	RUN_SUBTEST( MoverCacheInvalidation );
+	RUN_SUBTEST( MoverCacheFilterInvalidation );
+	RUN_SUBTEST( MoverCacheDynamicBody );
+	RUN_SUBTEST( MoverCacheDifferential );
+#if defined( BOX3D_DOUBLE_PRECISION )
+	RUN_SUBTEST( MoverCacheLargeWorld );
+#endif
 
 	return 0;
 }

@@ -1525,7 +1525,13 @@ void b3Shape_SetFilter( b3ShapeId shapeId, b3Filter filter, bool invokeContacts 
 		return;
 	}
 
+	bool categoryChanged = filter.categoryBits != shape->filter.categoryBits;
 	shape->filter = filter;
+	if ( categoryChanged && shape->proxyKey != B3_NULL_INDEX && B3_PROXY_TYPE( shape->proxyKey ) == b3_staticBody )
+	{
+		// A mover cache may have omitted this shape based on its previous category bits.
+		world->broadPhase.staticRevision += 1;
+	}
 
 	if ( invokeContacts )
 	{
@@ -1533,7 +1539,7 @@ void b3Shape_SetFilter( b3ShapeId shapeId, b3Filter filter, bool invokeContacts 
 		bool wakeBodies = true;
 
 		// If the category bits change, I need to destroy the proxy because it affects the tree sorting.
-		bool destroyProxy = filter.categoryBits == shape->filter.categoryBits;
+		bool destroyProxy = categoryChanged;
 
 		// need to wake bodies because a filter change may destroy contacts
 		b3ResetProxy( world, shape, wakeBodies, destroyProxy );

@@ -3180,14 +3180,77 @@ typedef struct WorldMoverCastContext
 	void* userContext;
 } WorldMoverCastContext;
 
-static float MoverCastCallback( const b3BoxCastInput* input, int proxyId, uint64_t userData, void* context )
+typedef struct b3MoverCacheEntry
 {
-	B3_UNUSED( proxyId );
+	int shapeId;
+	uint16_t generation;
+	b3AABB aabb;
+} b3MoverCacheEntry;
 
-	int shapeId = (int)userData;
-	WorldMoverCastContext* worldContext = (WorldMoverCastContext*)context;
+b3DeclareArray( b3MoverCacheEntry );
+
+struct b3MoverCache
+{
+	b3Array( b3MoverCacheEntry ) entries;
+	b3AABB bounds;
+	uint64_t staticRevision;
+	uint64_t maskBits;
+	uint32_t worldKey;
+	uint64_t hitCount;
+	uint64_t missCount;
+	bool valid;
+};
+
+b3MoverCache* b3CreateMoverCache( void )
+{
+	return b3AllocZeroed( sizeof( b3MoverCache ) );
+}
+
+void b3DestroyMoverCache( b3MoverCache* cache )
+{
+	if ( cache == NULL )
+	{
+		return;
+	}
+
+	b3Array_Destroy( cache->entries );
+	b3Free( cache, sizeof( b3MoverCache ) );
+}
+
+void b3MoverCache_Clear( b3MoverCache* cache )
+{
+	if ( cache == NULL )
+	{
+		return;
+	}
+
+	cache->entries.count = 0;
+	cache->bounds = (b3AABB){ 0 };
+	cache->staticRevision = 0;
+	cache->maskBits = 0;
+	cache->worldKey = 0;
+	cache->hitCount = 0;
+	cache->missCount = 0;
+	cache->valid = false;
+}
+
+b3MoverCacheStats b3MoverCache_GetStats( const b3MoverCache* cache )
+{
+	if ( cache == NULL )
+	{
+		return (b3MoverCacheStats){ 0 };
+	}
+
+	return (b3MoverCacheStats){
+		.candidateCount = cache->entries.count,
+		.hitCount = cache->hitCount,
+		.missCount = cache->missCount,
+	};
+}
+
+static float CastMoverShape( int shapeId, float maxFraction, WorldMoverCastContext* worldContext )
+{
 	b3World* world = worldContext->world;
-
 	b3Shape* shape = b3Array_Get( world->shapes, shapeId );
 	b3Filter shapeFilter = shape->filter;
 	b3QueryFilter queryFilter = worldContext->filter;
@@ -3207,11 +3270,9 @@ static float MoverCastCallback( const b3BoxCastInput* input, int proxyId, uint64
 		}
 	}
 
-	// Rebuild from the origin relative input, taking only the advancing fraction from the tree
 	b3ShapeCastInput localInput = worldContext->input;
-	localInput.maxFraction = input->maxFraction;
+	localInput.maxFraction = maxFraction;
 
-	// Re-center on the query origin so the per-shape cast stays in float precision far from the origin
 	b3Body* body = b3Array_Get( world->bodies, shape->bodyId );
 	b3Transform transform = b3ToRelativeTransform( b3GetBodyTransformQuick( world, body ), worldContext->origin );
 
@@ -3224,6 +3285,15 @@ static float MoverCastCallback( const b3BoxCastInput* input, int proxyId, uint64
 
 	worldContext->fraction = output.fraction;
 	return output.fraction;
+}
+
+static float MoverCastCallback( const b3BoxCastInput* input, int proxyId, uint64_t userData, void* context )
+{
+	B3_UNUSED( proxyId );
+
+	int shapeId = (int)userData;
+	WorldMoverCastContext* worldContext = (WorldMoverCastContext*)context;
+	return CastMoverShape( shapeId, input->maxFraction, worldContext );
 }
 
 float b3World_CastMover( b3WorldId worldId, b3Pos origin, const b3Capsule* mover, b3Vec3 translation, b3QueryFilter filter,
@@ -3293,6 +3363,136 @@ float b3World_CastMover( b3WorldId worldId, b3Pos origin, const b3Capsule* mover
 		b3RecPatchU32( &recWriter.buf, recWriter.countOffset, recWriter.hitCount );
 		b3RecW_F32( &recWriter.buf, worldContext.fraction );
 		b3RecQueryCommit( world->recording, b3_recOpQueryCastMover, &recWriter );
+	}
+
+	return worldContext.fraction;
+}
+
+typedef struct MoverCacheBuildContext
+{
+	b3World* world;
+	b3MoverCache* cache;
+} MoverCacheBuildContext;
+
+static bool MoverCacheBuildCallback( int proxyId, uint64_t userData, void* context )
+{
+	B3_UNUSED( proxyId );
+
+	MoverCacheBuildContext* buildContext = context;
+	b3World* world = buildContext->world;
+	b3MoverCache* cache = buildContext->cache;
+	int shapeId = (int)userData;
+	b3Shape* shape = b3Array_Get( world->shapes, shapeId );
+	b3MoverCacheEntry entry = {
+		.shapeId = shapeId,
+		.generation = shape->generation,
+		.aabb = shape->fatAABB,
+	};
+	b3Array_Push( cache->entries, entry );
+	return true;
+}
+
+static void RebuildMoverCache( b3WorldId worldId, b3World* world, b3MoverCache* cache, b3AABB bounds, uint64_t maskBits )
+{
+	cache->entries.count = 0;
+	MoverCacheBuildContext buildContext = { .world = world, .cache = cache };
+	b3DynamicTree_Query( world->broadPhase.trees + b3_staticBody, bounds, maskBits, false, MoverCacheBuildCallback,
+						 &buildContext );
+
+	cache->bounds = bounds;
+	cache->staticRevision = world->broadPhase.staticRevision;
+	cache->maskBits = maskBits;
+	cache->worldKey = b3StoreWorldId( worldId );
+	cache->valid = true;
+}
+
+float b3World_CastMoverCached( b3WorldId worldId, b3Pos origin, const b3Capsule* mover, b3Vec3 translation,
+							   b3MoverCache* cache, float cacheExtent, b3QueryFilter filter, b3MoverFilterFcn* fcn,
+							   void* context )
+{
+	B3_ASSERT( b3IsValidPosition( origin ) );
+	B3_ASSERT( b3IsValidVec3( translation ) );
+	B3_ASSERT( b3IsValidFloat( cacheExtent ) && cacheExtent >= 0.0f );
+
+	if ( cache == NULL )
+	{
+		return b3World_CastMover( worldId, origin, mover, translation, filter, fcn, context );
+	}
+
+	b3World* world = b3GetUnlockedWorldFromId( worldId );
+	if ( world == NULL )
+	{
+		cache->missCount += 1;
+		return 1.0f;
+	}
+
+	b3Vec3 centers[2] = { mover->center1, mover->center2 };
+	b3AABB localBox = b3MakeAABB( centers, 2, mover->radius );
+	b3AABB translatedBox = {
+		.lowerBound = b3Add( localBox.lowerBound, translation ),
+		.upperBound = b3Add( localBox.upperBound, translation ),
+	};
+	b3AABB localSweep = b3AABB_Union( localBox, translatedBox );
+	b3AABB sweepBounds = b3OffsetAABB( localSweep, origin );
+
+	bool canUseCache = cache->valid && cache->worldKey == b3StoreWorldId( worldId ) && cache->maskBits == filter.maskBits &&
+						   cache->staticRevision == world->broadPhase.staticRevision &&
+						   b3AABB_Contains( cache->bounds, sweepBounds ) && world->recording == NULL;
+
+	if ( canUseCache == false )
+	{
+		cache->missCount += 1;
+		float fraction = b3World_CastMover( worldId, origin, mover, translation, filter, fcn, context );
+
+		// Build around the complete requested sweep rather than the clipped result so nearby follow-up
+		// casts can stay in the cache. Inflation happens before lifting to world float coordinates.
+		b3AABB cacheBounds = b3OffsetAABB( b3AABB_Inflate( localSweep, cacheExtent ), origin );
+		RebuildMoverCache( worldId, world, cache, cacheBounds, filter.maskBits );
+		return fraction;
+	}
+
+	cache->hitCount += 1;
+	WorldMoverCastContext worldContext = {
+		.world = world,
+		.fcn = fcn,
+		.filter = filter,
+		.fraction = 1.0f,
+		.origin = origin,
+		.userContext = context,
+	};
+	worldContext.input.proxy = (b3ShapeProxy){ &mover->center1, 2, mover->radius };
+	worldContext.input.translation = translation;
+	worldContext.input.maxFraction = 1.0f;
+	worldContext.input.canEncroach = mover->radius > 0.0f;
+
+	for ( int i = 0; i < cache->entries.count; ++i )
+	{
+		b3MoverCacheEntry* entry = cache->entries.data + i;
+		if ( b3AABB_Overlaps( sweepBounds, entry->aabb ) == false )
+		{
+			continue;
+		}
+
+		b3Shape* shape = b3Array_Get( world->shapes, entry->shapeId );
+		B3_ASSERT( shape->id == entry->shapeId && shape->generation == entry->generation );
+		B3_UNUSED( shape );
+		CastMoverShape( entry->shapeId, worldContext.fraction, &worldContext );
+		if ( worldContext.fraction == 0.0f )
+		{
+			return 0.0f;
+		}
+	}
+
+	b3BoxCastInput treeInput = { b3OffsetAABB( localBox, origin ), translation, worldContext.fraction };
+	for ( int i = b3_kinematicBody; i < b3_bodyTypeCount; ++i )
+	{
+		b3DynamicTree_BoxCast( world->broadPhase.trees + i, &treeInput, filter.maskBits, false, MoverCastCallback,
+							   &worldContext );
+		if ( worldContext.fraction == 0.0f )
+		{
+			break;
+		}
+		treeInput.maxFraction = worldContext.fraction;
 	}
 
 	return worldContext.fraction;
@@ -3670,6 +3870,7 @@ void b3World_ShiftOrigin( b3WorldId worldId, b3Vec3 translation )
 		context.tree = world->broadPhase.trees + i;
 		b3ShiftParallelFor( world, &b3ShiftTreeTask, context.tree->nodeCapacity, &context, "shift tree" );
 	}
+	world->broadPhase.staticRevision += 1;
 
 	if ( setCapacity > 0 )
 	{
