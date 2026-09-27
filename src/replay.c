@@ -812,6 +812,11 @@ static void b3RecDispatch_WorldSetIsotropicInertiaTolerance( const b3RecArgs_Wor
 	b3World_SetIsotropicInertiaTolerance( rdr->replayWorldId, a->tolerance );
 }
 
+static void b3RecDispatch_WorldShiftOrigin( const b3RecArgs_WorldShiftOrigin* a, b3RecReader* rdr )
+{
+	b3World_ShiftOrigin( rdr->replayWorldId, a->translation );
+}
+
 static void b3RecDispatch_CreateBody( const b3RecArgs_CreateBody* a, b3RecReader* rdr )
 {
 	b3BodyId recId = b3RecR_BODYID( rdr );
@@ -831,6 +836,11 @@ static void b3RecDispatch_DestroyBody( const b3RecArgs_DestroyBody* a, b3RecRead
 		b3RecTrackBodyDestroy( rdr->owner, id );
 	}
 	b3DestroyBody( id );
+}
+
+static void b3RecDispatch_BodyDestroyShapes( const b3RecArgs_BodyDestroyShapes* a, b3RecReader* rdr )
+{
+	b3Body_DestroyShapes( b3RecMakeBodyId( rdr, a->body ), a->startShapeIndex, a->shapeCount );
 }
 
 static void b3RecDispatch_BodySetTransform( const b3RecArgs_BodySetTransform* a, b3RecReader* rdr )
@@ -1078,6 +1088,11 @@ static void b3RecDispatch_CreateCompoundShape( const b3RecArgs_CreateCompoundSha
 static void b3RecDispatch_DestroyShape( const b3RecArgs_DestroyShape* a, b3RecReader* rdr )
 {
 	b3DestroyShape( b3RecMakeShapeId( rdr, a->shape ), a->updateBodyMass );
+}
+
+static void b3RecDispatch_DestroyShapeRange( const b3RecArgs_DestroyShapeRange* a, b3RecReader* rdr )
+{
+	b3DestroyShapeRange( b3RecMakeShapeId( rdr, a->startShape ), a->count, a->updateBodyMass );
 }
 
 static void b3RecDispatch_ShapeSetName( const b3RecArgs_ShapeSetName* a, b3RecReader* rdr )

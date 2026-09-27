@@ -29,6 +29,9 @@ typedef struct b3BroadPhase
 	// The moved siblings gathered from the dynamic body tree.
 	int* movedSiblings;
 
+	// Monotonic proxy revision used to invalidate external static spatial caches.
+	uint64_t staticRevision;
+
 	// Tracks shape pairs that have a b3Contact
 	// todo pairSet can grow quite large on the first time step and remain large
 	b3HashSet pairSet;

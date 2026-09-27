@@ -38,9 +38,16 @@ void CharacterMover::Initialize( Sample* sample, b3Pos position )
 	m_pogoVelocity = 0.0f;
 	m_onGround = false;
 	m_sprint = false;
+	b3DestroyMoverCache( m_castCache );
+	m_castCache = b3CreateMoverCache();
 
 	m_ignoreShapeIds = nullptr;
 	m_ignoreCount = 0;
+}
+
+CharacterMover::~CharacterMover()
+{
+	b3DestroyMoverCache( m_castCache );
 }
 
 static bool PlaneResultFcn( b3ShapeId shapeId, const b3PlaneResult* planeResults, int planeCount, void* context )
@@ -201,7 +208,8 @@ void CharacterMover::SolveMove( float timeStep, b3Vec3 forward, b3Vec3 right, b3
 
 		b3Vec3 delta = result.delta;
 
-		float fraction = b3World_CastMover( worldId, m_transform.p, &mover, delta, castFilter, MoverFilterCallback, this );
+		float fraction =
+			b3World_CastMoverCached( worldId, m_transform.p, &mover, delta, m_castCache, 2.0f, castFilter, MoverFilterCallback, this );
 
 		delta *= fraction;
 		m_transform.p = m_transform.p + delta;
