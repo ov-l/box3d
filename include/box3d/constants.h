@@ -65,7 +65,8 @@ B3_API float b3GetStallThreshold( void );
 /// configurations.
 #define B3_OVERLAP_SLOP ( 0.1f * B3_LINEAR_SLOP )
 
-/// Maximum number of simultaneous worlds that can be allocated
+/// Maximum number of simultaneous worlds that can be allocated.
+/// Set B3_MAX_WORLDS in CMake to configure this when using the Box3D CMake target.
 #ifndef B3_MAX_WORLDS
 #define B3_MAX_WORLDS 128
 #endif

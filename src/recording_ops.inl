@@ -236,3 +236,9 @@ B3_REC_OP( 0xF1, StateHash, RET_NONE, ARG( WORLDID, world ) ARG( U64, hash ) )
 
 // Accumulated world bounds over the whole recording, written once at stop.
 B3_REC_OP( 0xF2, RecordingBounds, RET_NONE, ARG( AABB, bounds ) )
+
+// lxe fork extensions. 0x70-0x7F is unassigned upstream; allocate downward from 0x7F so upstream
+// growth out of the shape mutator range reaches these last.
+B3_REC_OP( 0x7F, WorldShiftOrigin, RET_NONE, ARG( WORLDID, world ) ARG( VEC3, translation ) )
+B3_REC_OP( 0x7E, BodyDestroyShapes, RET_NONE, ARG( BODYID, body ) ARG( I32, startShapeIndex ) ARG( I32, shapeCount ) )
+B3_REC_OP( 0x7D, DestroyShapeRange, RET_NONE, ARG( SHAPEID, startShape ) ARG( I32, count ) ARG( BOOL, updateBodyMass ) )

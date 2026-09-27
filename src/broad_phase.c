@@ -25,6 +25,7 @@ void b3CreateBroadPhase( b3BroadPhase* bp, const b3Capacity* capacity )
 	_Static_assert( b3_bodyTypeCount == 3, "must be three body types" );
 
 	bp->pairSet = b3CreateSet( b3MaxInt( 32, 2 * capacity->contactCount ) );
+	bp->staticRevision = 1;
 
 	int staticCapacity = b3MaxInt( 16, capacity->staticShapeCount );
 	bp->trees[b3_staticBody] = b3DynamicTree_Create( staticCapacity );
@@ -59,6 +60,10 @@ int b3BroadPhase_CreateProxy( b3BroadPhase* bp, b3BodyType proxyType, b3AABB aab
 
 	int proxyId = b3CreateTreeProxyInternal( bp->trees + proxyType, aabb, categoryBits, shapeIndex, mark );
 	int proxyKey = B3_PROXY_KEY( proxyId, proxyType );
+	if ( proxyType == b3_staticBody )
+	{
+		bp->staticRevision += 1;
+	}
 	return proxyKey;
 }
 
@@ -69,6 +74,10 @@ void b3BroadPhase_DestroyProxy( b3BroadPhase* bp, int proxyKey )
 
 	B3_ASSERT( 0 <= proxyType && proxyType < b3_bodyTypeCount );
 	b3DynamicTree_DestroyProxy( bp->trees + proxyType, proxyId );
+	if ( proxyType == b3_staticBody )
+	{
+		bp->staticRevision += 1;
+	}
 }
 
 void b3BroadPhase_MoveProxy( b3BroadPhase* bp, int proxyKey, b3AABB aabb )
@@ -78,6 +87,10 @@ void b3BroadPhase_MoveProxy( b3BroadPhase* bp, int proxyKey, b3AABB aabb )
 
 	bool mark = true;
 	b3DynamicTree_MoveProxyInternal( bp->trees + proxyType, proxyId, aabb, mark );
+	if ( proxyType == b3_staticBody )
+	{
+		bp->staticRevision += 1;
+	}
 }
 
 // Gather the sibling pairs with a moved node. This is done serially, it is cache friendly.

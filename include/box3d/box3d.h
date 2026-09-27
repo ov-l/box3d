@@ -11,6 +11,9 @@
 
 #include <stdbool.h>
 
+/// Opaque cache used to accelerate repeated character mover casts.
+typedef struct b3MoverCache b3MoverCache;
+
 /**
  * @defgroup world World
  * These functions allow you to create a simulation world.
@@ -119,6 +122,38 @@ B3_API b3TreeStats b3World_CastShape( b3WorldId worldId, b3Pos origin, const b3S
 /// @return the translation fraction
 B3_API float b3World_CastMover( b3WorldId worldId, b3Pos origin, const b3Capsule* mover, b3Vec3 translation, b3QueryFilter filter,
 								b3MoverFilterFcn* fcn, void* context );
+
+/// Create a cache for repeated character mover casts. A cache is independent of a world and may be reused after a world is
+/// destroyed. Use one cache per concurrently moving character.
+B3_API b3MoverCache* b3CreateMoverCache( void );
+
+/// Destroy a character mover cache.
+B3_API void b3DestroyMoverCache( b3MoverCache* cache );
+
+/// Clear a character mover cache and its diagnostics while retaining its allocated storage.
+B3_API void b3MoverCache_Clear( b3MoverCache* cache );
+
+/// Get character mover cache diagnostics.
+B3_API b3MoverCacheStats b3MoverCache_GetStats( const b3MoverCache* cache );
+
+/// Cast a capsule mover using a conservative cache of nearby static shapes. Cached static candidates are tested exactly while
+/// kinematic and dynamic shapes are always queried from the world, producing the same collision fraction as b3World_CastMover.
+/// The first cast, a cast outside the cached region, or a static-world change falls back to b3World_CastMover and refreshes the
+/// cache for later calls.
+///
+/// @param worldId World to cast the mover against
+/// @param origin World position the mover capsule is relative to
+/// @param mover Capsule mover, relative to the origin
+/// @param translation Desired mover translation
+/// @param cache Cache created by b3CreateMoverCache
+/// @param cacheExtent Extra distance around the swept mover to retain static candidates. Must be non-negative.
+/// @param filter Contains bit flags to filter unwanted shapes from the results
+/// @param fcn Optional callback for custom shape filtering
+/// @param context A user context that is passed along to the callback function
+/// @return the translation fraction
+B3_API float b3World_CastMoverCached( b3WorldId worldId, b3Pos origin, const b3Capsule* mover, b3Vec3 translation,
+								  b3MoverCache* cache, float cacheExtent, b3QueryFilter filter, b3MoverFilterFcn* fcn,
+								  void* context );
 
 /// Collide a capsule mover with the world, gathering collision planes that can be fed to b3SolvePlanes. Useful for
 /// kinematic character movement. The mover and the returned planes are relative to the origin.
@@ -257,6 +292,27 @@ B3_API void b3World_DumpShapeBounds( b3WorldId worldId, b3BodyType type );
 
 /// This is for internal testing
 B3_API void b3World_EnableSpeculative( b3WorldId worldId, bool flag );
+
+/// Rigidly translate the whole world, so a host can keep the simulated content near the float
+/// origin as it streams across a large map. Every body transform, shape bound and broad-phase bound
+/// moves by @p translation; nothing that stores a relationship does, so contacts, warm-start
+/// impulses, joints and sleeping islands all survive unchanged and no body is woken.
+///
+/// This is the float-precision alternative to BOX3D_DOUBLE_PRECISION: rather than widening the
+/// coordinate, keep it small. Call it between steps -- never from inside a callback -- and shift by
+/// whole units of whatever grid the host rebases on, so the translation is exact.
+///
+/// Positions the host is still holding from before the call (query hits, cached transforms, the
+/// event arrays it has not drained yet) are in the old frame and must be offset by the same amount.
+/// The event arrays owned by the world are shifted for you.
+/// @ingroup world
+B3_API void b3World_ShiftOrigin( b3WorldId worldId, b3Vec3 translation );
+
+/// The sum of every translation applied by b3World_ShiftOrigin since the world was created.
+/// Diagnostic: it tells you how far the world's float frame has drifted from the frame the content
+/// was authored in.
+/// @ingroup world
+B3_API b3Pos b3World_GetOriginShift( b3WorldId worldId );
 
 /**
  * @defgroup recording Recording
@@ -761,6 +817,10 @@ B3_API int b3Body_GetShapeCount( b3BodyId bodyId );
 /// @returns the number of shape ids stored in the user array
 B3_API int b3Body_GetShapes( b3BodyId bodyId, b3ShapeId* shapeArray, int capacity );
 
+/// Destroy a contiguous range of shapes on this body. Shape indices use the same order as b3Body_GetShapes.
+/// The body mass is updated once after all shapes have been destroyed.
+B3_API void b3Body_DestroyShapes( b3BodyId bodyId, int startShapeIndex, int shapeCount );
+
 /// Get the number of joints on this body
 B3_API int b3Body_GetJointCount( b3BodyId bodyId );
 
@@ -875,6 +935,12 @@ B3_API b3ShapeId b3CreateBakedCompoundShape( b3BodyId bodyId, b3ShapeDef* def, c
 ///	body are destroyed at once.
 ///	@see b3Body_ApplyMassFromShapes
 B3_API void b3DestroyShape( b3ShapeId shapeId, bool updateBodyMass );
+
+/// Destroy a contiguous range of shapes on one body, beginning with startShapeId. The range follows
+/// the shape order returned by b3Body_GetShapes. The body mass is optionally updated once after all
+/// shapes have been destroyed.
+/// @see b3Body_ApplyMassFromShapes
+B3_API void b3DestroyShapeRange( b3ShapeId startShapeId, int count, bool updateBodyMass );
 
 /// Shape identifier validation. Provides validation for up to 64K allocations.
 B3_API bool b3Shape_IsValid( b3ShapeId id );
