@@ -951,7 +951,9 @@ b3DistanceOutput b3ShapeDistance( const b3DistanceInput* input, b3SimplexCache* 
 			distanceOutput.distance = 0.0f;
 			distanceOutput.iterations = iteration;
 			distanceOutput.simplexCount = simplexIndex;
-			B3_VALIDATE( b3Distance( localPointA, localPointB ) < FLT_EPSILON );
+			// The witness points coincide up to rounding, which scales with how far from the origin they lie.
+			B3_VALIDATE( b3Distance( localPointA, localPointB ) <
+						 4.0f * FLT_EPSILON * b3MaxFloat( 1.0f, b3Length( localPointA ) ) );
 			return distanceOutput;
 		}
 
