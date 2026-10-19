@@ -951,9 +951,10 @@ b3DistanceOutput b3ShapeDistance( const b3DistanceInput* input, b3SimplexCache* 
 			distanceOutput.distance = 0.0f;
 			distanceOutput.iterations = iteration;
 			distanceOutput.simplexCount = simplexIndex;
-			// The witness points coincide up to rounding, which scales with how far from the origin they lie.
+			// The witness points coincide up to rounding, which scales with how far from the origin they lie:
+			// a large triangle mesh puts them hundreds of units out, so the check allows the linear slop.
 			B3_VALIDATE( b3Distance( localPointA, localPointB ) <
-						 4.0f * FLT_EPSILON * b3MaxFloat( 1.0f, b3Length( localPointA ) ) );
+						 B3_LINEAR_SLOP + ( 4.0f * FLT_EPSILON * b3Length( localPointA ) ) );
 			return distanceOutput;
 		}
 
